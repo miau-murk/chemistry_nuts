@@ -2,7 +2,7 @@ from enum import Enum, auto
 import numpy as np
 import nutpie
 from nutpie.compiled_pyfunc import from_pyfunc
-from .stat_collector import Statistic
+from .stat_collector import Statistics
 
 
 class MassMatrixAdaptation(Enum):
@@ -26,7 +26,7 @@ class NutsSampler:
         self.bounds = bounds
         self.dim = dim
         self.sample = None
-        self.statistics: Statistic | None = None
+        self.statistics: Statistics | None = None
 
     @staticmethod
     def make_expand_func(*unused):
@@ -49,7 +49,7 @@ class NutsSampler:
         tune: int = 100,
         chains: int = 1,
         target_accept: float = 0.8,
-        maxdepth: int = 16,
+        maxdepth: int = 8,
         max_energy_error: float = 1000.0,
         # mass matrix adaptation mode
         mass_matrix_mode: MassMatrixAdaptation = MassMatrixAdaptation.STANDARD,
@@ -112,7 +112,7 @@ class NutsSampler:
         fit = nutpie.sample(model, **final_args)
 
         # logging
-        self.statistics = Statistic(fit)
+        self.statistics = Statistics(fit)
         self.sample = fit.posterior.y
 
         return self.sample
