@@ -480,8 +480,28 @@ def get_wilson_b_matrix(mol : Chem.rdchem.Mol):
 
     return int_coords_list, wilson_b_matrix(coords_flat, *int_coords_list)
 
+def gradient_to_internal(mol: Chem.rdchem.Mol,
+                         cart_grad: vec3d) -> tuple[list, np.ndarray]:
 
-def gradient_to_internal(mol : Chem.rdchem.Mol,
+    int_coords, B = get_wilson_b_matrix(mol)
+    g_cart = np.asarray(cart_grad, dtype=float).reshape(-1, 1)
+
+    try:
+        Bt_pinv = np.linalg.pinv(B.T, rcond=1e-8)
+        g_int = Bt_pinv @ g_cart
+        g_int = np.asarray(g_int, dtype=float).ravel()
+
+        if not np.all(np.isfinite(g_int)):
+            raise np.linalg.LinAlgError("Non-finite values in internal gradient")
+
+    except np.linalg.LinAlgError:
+
+        g_int = np.zeros((B.shape[0],), dtype=float)
+
+    return int_coords, g_int
+
+
+def gradient_to_internal_unstable(mol : Chem.rdchem.Mol,
                          cart_grad : vec3d) -> vec3d:
     """
         Converts cartesian gradint to internal, returns int_coords and internal gradient
