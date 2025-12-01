@@ -12,7 +12,11 @@ from .wilson_b_matrix import (
 
 import copy
 import os
+import shutil
+import glob
 import time
+
+
 
 class ConfCalc:
 
@@ -139,10 +143,11 @@ class ConfCalc:
                 logfile name if optimization succeeded, None otherwise
 
         """
-
         log_name = xyz_name[:-3] + "log"
-        os.system(f"xtb --input {inp_name} --charge {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name}")
         
+        # os.system(f"xtb --input {inp_name} --charge {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name}")
+        os.system(f"xtb --input {inp_name} --charge {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name} 2>&1")
+
         while True:
             try:
                 with open(log_name, "r") as file:
@@ -194,6 +199,16 @@ class ConfCalc:
             grads = [line[:-1] for line in file][(2 + num_of_atoms):-1]
         return np.array(list(map(lambda s: list(map(float, s.split())), grads)))            
 
+    def __move_xtb_files_to_folder(self, target_folder="xtb_dump"):
+        os.makedirs(target_folder, exist_ok=True)
+        file_patterns = ["*.out", "*.wfn", "*.log", "*.tmp", "*gradient", 
+                        "*.inp", "*.xyz", "*.engrad", "*energy", "*wbo", 
+                        "*xtbrestart", "*xtbtopo*", "*charges"]
+        
+        for pattern in file_patterns:
+            for f in glob.glob(pattern):
+                shutil.move(f, os.path.join(target_folder, f))
+
     def __calc_energy(self, 
                       mol : Chem.Mol, 
                       inp_name : str,
@@ -224,7 +239,9 @@ class ConfCalc:
                                                cart_grads.flatten(),
                                                Dihedral(*rotable_idx))    
                 ))
-        
+
+        self.__move_xtb_files_to_folder()
+
         return self.__parse_energy_from_log(log_name), irc_grad
 
     def get_energy(self, 
@@ -253,4 +270,3 @@ class ConfCalc:
             'grads' : grad
            }
     
-
