@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 from rdkit import Chem
 
-from .conf_calc.conf_calc import ConfCalc
+from .conf_calc.pyxtb_conf_calc import ConfCalc
 from .conf_calc.angles import Conformation
 from .nutpie_hmc.nuts_sampler import MassMatrixAdaptation, NutsSampler
 
@@ -16,7 +16,6 @@ def build_calculator(mol_file: str) -> Tuple[ConfCalc, int]:
     rotatable_dih_idx = [list(dih_angle[0]) for dih_angle in nonring_dih_angles]
     calculator = ConfCalc(
         mol=ref_conf,
-        dir_to_xyzs="xtb_calcs/",
         rotable_dihedral_idxs=rotatable_dih_idx,
     )
     dim = len(rotatable_dih_idx)
@@ -37,7 +36,6 @@ def make_log_prob_sphere(calculator: ConfCalc):
 
         result = calculator.get_energy(
             phi.tolist(),
-            req_opt=False,
             req_grad=True,
         )
 
@@ -66,12 +64,18 @@ def parse_args():
     parser.add_argument(
         "--tune",
         type=int,
-        default=3,
+        default=500,
     )
     parser.add_argument(
         "--draws",
         type=int,
-        default=3,
+        default=500,
+    )
+
+    parser.add_argument(
+        "--chains",
+        type=int,
+        default=4,
     )
 
     parser.add_argument(
@@ -99,9 +103,9 @@ def main():
         mass_matrix_mode=MassMatrixAdaptation.GRADIENT_BASED,
         draws=args.draws,
         tune=args.tune,
-        chains=1,
+        chains=args.chains,
         target_accept=0.8,
-        maxdepth=8,
+        maxdepth=16,
         max_energy_error=1000.0,
     )
 
