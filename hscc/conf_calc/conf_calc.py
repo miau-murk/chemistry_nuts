@@ -144,9 +144,8 @@ class ConfCalc:
 
         """
         log_name = xyz_name[:-3] + "log"
-        
-        # os.system(f"xtb --input {inp_name} --charge {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name}")
-        os.system(f"xtb --input {inp_name} --charge {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name} 2>&1")
+
+        os.system(f"xtb --input {inp_name} --charge  {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name} 2>&1")
 
         while True:
             try:
