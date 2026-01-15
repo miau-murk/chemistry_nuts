@@ -64,18 +64,18 @@ def parse_args():
     parser.add_argument(
         "--tune",
         type=int,
-        default=500,
+        default=1,
     )
     parser.add_argument(
         "--draws",
         type=int,
-        default=500,
+        default=1,
     )
 
     parser.add_argument(
         "--chains",
         type=int,
-        default=4,
+        default=1,
     )
 
     parser.add_argument(
@@ -104,8 +104,8 @@ def main():
         draws=args.draws,
         tune=args.tune,
         chains=args.chains,
-        target_accept=0.8,
-        maxdepth=16,
+        target_accept=0.65,
+        maxdepth=3,
         max_energy_error=1000.0,
     )
 
