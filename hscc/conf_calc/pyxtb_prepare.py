@@ -3,7 +3,7 @@ from rdkit import Chem
 from .pyxtb_conf_calc import ConfCalc
 from .angles import Conformation
 
-mol_file = "test.mol"
+mol_file = "chlor_butan.mol"
 
 ref_conf = Chem.MolFromMolFile(mol_file, removeHs=False)
 
@@ -21,7 +21,7 @@ dim = len(rotatable_dih_idx)
 phi_random = np.random.uniform(0, 2 * np.pi, dim)
 
 mol = calculator.get_conformation(phi_random)
-Chem.MolToMolFile(mol, "test.mol")
+Chem.MolToMolFile(mol, "chlor_butan.mol")
 
 # print(calculator.get_energy(np.random.random(len(nonring_dih_angles)), req_opt=False,
 #                 req_grad=False))
