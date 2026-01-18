@@ -59,23 +59,23 @@ def parse_args():
     parser.add_argument(
         "--mol",
         type=str,
-        default="butan.mol",
+        default="chlor_butan.mol",
     )
     parser.add_argument(
         "--tune",
         type=int,
-        default=50,
+        default=4,
     )
     parser.add_argument(
         "--draws",
         type=int,
-        default=50,
+        default=4,
     )
 
     parser.add_argument(
         "--chains",
         type=int,
-        default=2,
+        default=1,
     )
 
     parser.add_argument(
