@@ -167,4 +167,13 @@ class ConfCalc:
         return {
             "energy": energy,
             "grads": grad,
+            "mol": mol
         }
+    
+    def get_conformation(
+        self,
+        values: list[float],
+    ) -> dict:
+        
+        mol = self.__setup_dihedrals(values)
+        return mol
