@@ -25,32 +25,32 @@ def build_calculator(mol_file: str) -> Tuple[ConfCalc, int]:
 def make_log_prob_sphere(calculator: ConfCalc):
     def log_prob_sphere(z: np.ndarray) -> Tuple[float, np.ndarray]:
         z = np.asarray(z, dtype=float)
-
         # transform R -> (-pi, pi)
         phi = np.pi * np.tanh(z)
-        dphi_dz = np.pi * (1.0 / np.cosh(z) ** 2)  # sech^2(z)
-
+        
         kB_au = 3.1668105e-6
         T = 300.0
         beta = 1.0 / (kB_au * T)
-
         result = calculator.get_energy(
             phi.tolist(),
+            req_opt=False,
             req_grad=True,
         )
-
         E_phi = result["energy"]
         grad_E_phi = np.array([g[1] for g in result["grads"]])
         grad_E_phi = np.asarray(grad_E_phi, dtype=float)
-
-        log_abs_detJ = np.log(np.abs(dphi_dz)).sum()
-
+        
+        dim_z = z.size
+        log_abs_detJ = np.log(np.pi) * dim_z - 2.0 * np.log(np.cosh(z)).sum()
+        
+        tanh_z = np.tanh(z)
+        dphi_dz = np.pi * (1.0 - tanh_z ** 2)
+        
         log_p = -beta * float(E_phi) + log_abs_detJ
         grad_logp = -beta * grad_E_phi * dphi_dz
         grad_logp += -2.0 * np.tanh(z)
-
+        
         return log_p, grad_logp
-
     return log_prob_sphere
 
 
@@ -59,23 +59,23 @@ def parse_args():
     parser.add_argument(
         "--mol",
         type=str,
-        default="test.mol",
+        default="butan.mol",
     )
     parser.add_argument(
         "--tune",
         type=int,
-        default=1,
+        default=50,
     )
     parser.add_argument(
         "--draws",
         type=int,
-        default=1,
+        default=50,
     )
 
     parser.add_argument(
         "--chains",
         type=int,
-        default=1,
+        default=2,
     )
 
     parser.add_argument(
@@ -99,17 +99,45 @@ def main():
         dim,
     )
 
-    _ = nuts.create_sample(
+    sampler_stats = nuts.create_sample(
         mass_matrix_mode=MassMatrixAdaptation.GRADIENT_BASED,
         draws=args.draws,
         tune=args.tune,
         chains=args.chains,
-        target_accept=0.65,
-        maxdepth=3,
+        target_accept=0.6,
+        maxdepth=4,
         max_energy_error=1000.0,
     )
 
     nuts.statistics.save_to_nc(args.stats)
+
+    def circular_mean(angles):
+        x = np.mean(np.cos(angles), axis=0)
+        y = np.mean(np.sin(angles), axis=0)
+        return np.arctan2(y, x)
+
+    samples = sampler_stats.values
+    phi_samples = np.pi * np.tanh(samples)
+    
+    for chain in range(phi_samples.shape[0]):
+        conformations = []
+
+        for draw in range(phi_samples.shape[1]):
+            phi = phi_samples[chain, draw, :]
+            mol_with_conf = calculator.get_conformation(phi.tolist())
+            conformations.append(mol_with_conf)
+
+        phi_chain = phi_samples[chain]
+        phi_mean = circular_mean(phi_chain)
+        mol_with_conf_mean = calculator.get_conformation(phi_mean.tolist())
+        conformations.append(mol_with_conf_mean)
+
+        output_sdf = args.mol.replace(".mol", f"_conformations_{chain}.sdf")
+        with Chem.SDWriter(output_sdf) as writer:
+            for i, mol in enumerate(conformations):
+                mol.SetProp("ConformationIndex", str(i))
+                writer.write(mol)
+    
 
 
 if __name__ == "__main__":
