@@ -10,6 +10,8 @@ from .wilson_b_matrix import (
     get_current_derivative
 )
 
+import subprocess
+from pathlib import Path
 import copy
 import os
 import shutil
@@ -128,48 +130,70 @@ class ConfCalc:
         return inp_name
 
     def __run_xtb(self,
-                  xyz_name : str,
-                  inp_name : str,
-                  req_opt : bool = True,
-                  req_grad : bool = True) -> Union[str, None]:
+              xyz_name: str,
+              inp_name: str,
+              req_opt: bool = True,
+              req_grad: bool = True) -> Union[str, None]:
         """
-            Runs xtb with current xyz_file, returns name of log file
-            Args:
-                xyz_name - name of .xyz file
-                inp_name - name of .inp file
-                req_opt - optimization or single-point energy
-                req_grad - gradients required
-            Returns:
-                logfile name if optimization succeeded, None otherwise
+        Runs xtb with current xyz_file, returns name of log file
+        Args:
+            xyz_name - name of .xyz file
+            inp_name - name of .inp file
+            req_opt - optimization or single-point energy
+            req_grad - gradients required
+        Returns:
+            logfile name if optimization succeeded, None otherwise
+        """
+        import subprocess
+        import shutil
+        import sys
 
-        """
         log_name = xyz_name[:-3] + "log"
 
-        os.system(f"xtb --input {inp_name} --charge  {self.charge} --gfn {self.gfn_method} {xyz_name} {'--opt' if req_opt else ''} {'--grad' if req_grad else ''} > {log_name} 2>&1")
+        xtb_path = shutil.which("xtb")
+        if xtb_path is None:
+            print("ERROR: xtb not found in PATH", file=sys.stderr)
+            return None
 
-        while True:
-            try:
-                with open(log_name, "r") as file:
-                    file_lines = [line for line in file]    
+        cmd = [
+            xtb_path,
+            "--input", inp_name,
+            "--charge", str(self.charge),
+            "--gfn", str(self.gfn_method),
+            xyz_name
+        ]
+        if req_opt:
+            cmd.append("--opt")
+        if req_grad:
+            cmd.append("--grad")
 
-                    line_with_en = [
-                        line for line in file_lines
-                        if "TOTAL ENERGY" in line
-                    ]
 
-                    line_with_error = [
-                        line for line in file_lines
-                        if "[ERROR] Program stopped due to fatal error" in line
-                    ]
+        try:
+            # Запускаем xtb с таймаутом (например, 300 сек = 5 мин)
+            result = subprocess.run(
+                cmd,
+                stdout=open(log_name, "w"),
+                stderr=subprocess.STDOUT,
+                timeout=100,
+                text=True
+            )
+        except subprocess.TimeoutExpired:
+            return None
+        except Exception:
+            return None
 
-                    if len(line_with_en) != 0:
-                        return log_name
-                    if len(line_with_error) != 0:
-                        return None
-            except FileNotFoundError:
-                pass
-            finally:
-                time.sleep(self.timeout / 1000)
+
+        try:
+            with open(log_name, "r") as file:
+                content = file.read()
+                if "TOTAL ENERGY" in content:
+                    return log_name
+                if "[ERROR] Program stopped due to fatal error" in content:
+                    return None
+        except FileNotFoundError:
+            pass
+
+        return None
 
     def __parse_energy_from_log(self, 
                                 log_name : str) -> float:
@@ -269,3 +293,10 @@ class ConfCalc:
             'grads' : grad
            }
     
+    def get_conformation(
+        self,
+        values: list[float],
+    ) -> dict:
+        
+        mol = self.__setup_dihedrals(values)
+        return mol
