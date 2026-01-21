@@ -3,8 +3,7 @@ from rdkit import Chem
 from .conf_calc import ConfCalc
 from .angles import Conformation
 
-# mol_file = "test0.mol"
-mol_file = "test.mol"
+mol_file = "bibenzil.mol"
 
 ref_conf = Chem.MolFromMolFile(mol_file, removeHs=False)
 
@@ -21,4 +20,11 @@ calculator = ConfCalc(mol=ref_conf,
                       dir_to_xyzs="xtb_calcs/",
                       rotable_dihedral_idxs=rotatable_dih_idx)
 
-print(calculator.get_energy(np.array([1.0]), req_grad=True, req_opt=False)) # for sampling
+dim = len(rotatable_dih_idx)
+phi_random = np.random.uniform(0, 2 * np.pi, dim)
+
+mol = calculator.get_conformation(phi_random)
+Chem.MolToMolFile(mol, "bibenzil.mol")
+
+# print(calculator.get_energy(np.random.random(len(nonring_dih_angles)), req_opt=False,
+#                 req_grad=False))
